@@ -9,18 +9,18 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-/* type Users struct {
+type Users struct {
 	ID         string
-	connection *websocket.Conn
-} */
+	Connection *websocket.Conn
+}
 
 type Data struct {
 	From    string `json:"from"`
 	To      string `json:"to"`
-	message string `json:"message"`
+	Message string `json:"message"`
 }
 
-//var clients = make(map[string]*websocket.Conn)
+var clients = make(map[string]*Users)
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -38,10 +38,13 @@ func main() {
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
-	/* userId := r.URL.Query().Get("id")
-	fmt.Println("user ID => ", userId) */
+	userId := r.URL.Query().Get("id")
+	if userId == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
 
-	var message Data
+	fmt.Println("user ID connected => ", userId)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -49,15 +52,34 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/* clients[userId] = conn
-	// receiver user Id
-	rcv := message.To
-	rcvConn := clients[rcv] */
+	user := &Users{
+		ID:         userId,
+		Connection: conn,
+	}
+
+	clients[userId] = user
+
+	fmt.Println("Total users connected ", len(clients))
 
 	defer conn.Close()
 
+	UserHandling(user)
+
+}
+
+func UserHandling(user *Users) {
+	defer func() {
+		user.Connection.Close()
+		delete(clients, user.ID)
+
+		fmt.Println("Exiting")
+		fmt.Println("Number of active clients", len(clients))
+	}()
+
+	var message Data
+
 	for {
-		mt, msg, err := conn.ReadMessage()
+		mt, msg, err := user.Connection.ReadMessage() // ye sender ka ws CONNECTION hai uska messsage receive honga
 		if err != nil {
 			log.Println("Error while reading the message", err.Error())
 			return
@@ -69,18 +91,18 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//fmt.Println("Received message:", string(msg))
-		err = conn.WriteMessage(mt, msg)
+		rcv := message.To
+		rcvConn, exist := clients[rcv]
+		if !exist {
+			log.Println("Recepients doesn't exist: ", rcv)
+			continue
+		}
+		err = rcvConn.Connection.WriteMessage(mt, msg) // yha ss receiver ko msg jayega
 		if err != nil {
 			log.Println(err)
 			return
 		}
-
-		go Readmsg(msg)
-
+		fmt.Println("Message from ", message.From, "is ", message.Message)
 	}
-}
 
-func Readmsg(message []byte) {
-	fmt.Println(string(message))
 }
