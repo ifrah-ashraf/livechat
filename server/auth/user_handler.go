@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"livechat-app/models"
+	"livechat-app/utils"
 	"net/http"
 )
 
@@ -23,6 +24,14 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userName := user.Name
+	tokenString, err := utils.GenerateJWT(userName)
+	if err != nil {
+		http.Error(w, "failed to generate token", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("Token created is : ", tokenString)
 	response := user
 	fmt.Println(response)
 
