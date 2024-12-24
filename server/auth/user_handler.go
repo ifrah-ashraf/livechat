@@ -9,6 +9,7 @@ import (
 )
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
+
 	var user models.NewUser
 
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -31,9 +32,21 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Token created is : ", tokenString)
+	fmt.Println("Token created after sign up : ", tokenString)
 	response := user
 	fmt.Println(response)
+
+	cookie := http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Path:     "/",
+		MaxAge:   3600,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	http.SetCookie(w, &cookie)
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -44,6 +57,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+
 	var userBody models.ExistUser
 
 	err := json.NewDecoder(r.Body).Decode(&userBody)
@@ -53,14 +67,34 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if userBody.UserId == "" || userBody.Password == "" {
+	if userBody.UserID == "" || userBody.Password == "" {
 		http.Error(w, "Please fill all the given fields", http.StatusBadRequest)
 		fmt.Println("Validation failed: one or more field are empty")
 		return
 	}
 
+	userid := userBody.UserID
+	tokenString, err := utils.GenerateJWT(userid)
+	if err != nil {
+		http.Error(w, "failed to generate token", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("Token created after login :", tokenString)
 	response := userBody
 	fmt.Println(response)
+
+	cookie := http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Path:     "/",
+		MaxAge:   3600,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	http.SetCookie(w, &cookie)
 
 	w.Header().Set("Content-Type", "application/json")
 

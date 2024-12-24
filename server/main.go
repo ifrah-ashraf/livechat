@@ -2,7 +2,8 @@ package main
 
 import (
 	"livechat-app/auth"
-	"livechat-app/handler"
+	"livechat-app/middleware"
+	"livechat-app/sock"
 	"log"
 	"net/http"
 
@@ -13,7 +14,7 @@ import (
 
 func main() {
 	router := http.NewServeMux()
-	router.HandleFunc("/chat", handler.WS_handler)
+	router.HandleFunc("/chat", middleware.AuthMiddleware(sock.WS_handler))
 	router.HandleFunc("/signup", auth.SignUp)
 	router.HandleFunc("/login", auth.Login)
 

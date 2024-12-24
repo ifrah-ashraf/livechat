@@ -26,6 +26,6 @@ func GenerateJWT(username string) (string, error) {
 	}
 
 	//for debuggin use this
-	fmt.Println("token string is", tokenString)
+	//fmt.Println("token string is", tokenString)
 	return tokenString, nil
 }
