@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"livechat-app/auth"
 	"livechat-app/middleware"
+	"livechat-app/postgres"
 	"livechat-app/sock"
 	"log"
 	"net/http"
@@ -13,6 +15,12 @@ import (
 //cors policy fix
 
 func main() {
+
+	err := postgres.DbConnect()
+	if err != nil {
+		fmt.Println("Error in database", err)
+	}
+
 	router := http.NewServeMux()
 	router.HandleFunc("/chat", middleware.AuthMiddleware(sock.WS_handler))
 	router.HandleFunc("/signup", auth.SignUp)

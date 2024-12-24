@@ -1,4 +1,4 @@
-package db
+package postgres
 
 import (
 	"database/sql"
@@ -7,9 +7,10 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
-func DbConnect() {
+func DbConnect() error {
 	err := godotenv.Load()
 
 	if err != nil {
@@ -17,16 +18,24 @@ func DbConnect() {
 	}
 
 	conn := os.Getenv("connStr")
+
 	db, err := sql.Open("postgres", conn)
+
 	if err != nil {
-		log.Fatal(err.Error())
+		fmt.Println("Error while connecting to db", err.Error())
+		return err
 	}
 	defer db.Close()
 
 	if err = db.Ping(); err != nil {
 		log.Printf("Database connection error : %v", err)
-		return
+		return err
 	}
-	fmt.Println("The database is connected")
+	fmt.Println("database is connected")
 
+	err = CreateUser(db)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return nil
 }
