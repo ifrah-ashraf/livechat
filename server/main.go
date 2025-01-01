@@ -16,19 +16,24 @@ import (
 
 func main() {
 
-	err := postgres.DbConnect()
+	db, err := postgres.DbConnect()
 	if err != nil {
 		fmt.Println("Error in database", err)
 	}
 
+	defer db.Close()
+
 	router := http.NewServeMux()
 	router.HandleFunc("/chat", middleware.AuthMiddleware(sock.WS_handler))
-	router.HandleFunc("/signup", auth.SignUp)
-	router.HandleFunc("/login", auth.Login)
+	router.HandleFunc("/signup", auth.SignUpHandler(db))
+	router.HandleFunc("/login", auth.LoginHandler(db))
+	router.HandleFunc("/logout", auth.LogoutHandler)
+	router.HandleFunc("/verify-user", auth.VerifyUser)
 
 	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
 		handlers.AllowedMethods([]string{"GET", "PUT", "POST", "DELETE"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		handlers.AllowCredentials(),
 	)(router)))
 }

@@ -21,7 +21,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		token, err := verifyToken(tokenCookie.Value)
+		token, err := VerifyToken(tokenCookie.Value)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Unauthorized: Token verification failed: %v", err), http.StatusUnauthorized)
 			return
@@ -34,7 +34,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func verifyToken(tokenString string) (*jwt.Token, error) {
+func VerifyToken(tokenString string) (*jwt.Token, error) {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 

@@ -9,7 +9,7 @@ func CreateUser(db *sql.DB) error {
 
 	createQuery := `CREATE TABLE IF NOT EXISTS users (
     		id SERIAL PRIMARY KEY,
-    		user_id VARCHAR(50) NOT NULL UNIQUE,
+    		userid VARCHAR(50) NOT NULL UNIQUE,
     		name VARCHAR(50) NOT NULL,
     		password VARCHAR(255) NOT NULL,       
     		sex VARCHAR(10),

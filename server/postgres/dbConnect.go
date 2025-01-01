@@ -10,7 +10,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func DbConnect() error {
+func DbConnect() (*sql.DB, error) {
 	err := godotenv.Load()
 
 	if err != nil {
@@ -23,19 +23,18 @@ func DbConnect() error {
 
 	if err != nil {
 		fmt.Println("Error while connecting to db", err.Error())
-		return err
+		return nil, err
 	}
-	defer db.Close()
-
 	if err = db.Ping(); err != nil {
 		log.Printf("Database connection error : %v", err)
-		return err
+		return nil, err
 	}
 	fmt.Println("database is connected")
 
-	err = CreateUser(db)
+	//code for table creation
+	/* err = CreateUser(db)
 	if err != nil {
 		fmt.Println(err)
-	}
-	return nil
+	} */
+	return db, nil
 }
