@@ -32,7 +32,7 @@ func VerifyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := token.Claims.GetSubject()
-	fmt.Printf("The user is %s", user)
+	fmt.Printf("The user is %s \n", user)
 
 	response := map[string]string{
 		"user":    user,

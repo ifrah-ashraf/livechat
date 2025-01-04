@@ -17,7 +17,7 @@ export function ChatNavbar() {
           </Link>
           <div className="flex items-center space-x-4">
             <Button asChild className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600">
-              <Link href="#logout">Log out</Link>
+              <Link href="#logout">Log out </Link>
             </Button>
           </div>
         </div>

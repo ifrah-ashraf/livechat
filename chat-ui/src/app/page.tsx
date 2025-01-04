@@ -24,10 +24,10 @@ export default function Home() {
 
           <div className="grid gap-4 md:grid-cols-2 max-w-md w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             <Button asChild size="lg" variant="outline" className="border-indigo-500 text-indigo-500 hover:bg-indigo-50">
-              <Link href="/login">Login</Link>
+              <Link href="/auth/login">Login</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-indigo-500 text-indigo-500 hover:bg-indigo-50">
-              <Link href="/signup">Sign Up</Link>
+              <Link href="/auth/signup">Sign Up</Link>
             </Button>
           </div>
 
