@@ -5,6 +5,7 @@ import { AuthWrapper } from "@/components/auth/AuthWrapper";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft } from "lucide-react" ;
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,8 @@ import React, { useState } from "react";
 
 
 export default function LoginPage() {
+
+  const {setUser} = useAuth()
 
   const router = useRouter()
   const [userId, setUserId] = useState("")
@@ -27,7 +30,7 @@ export default function LoginPage() {
       }
 
 
-      const response = await fetch("http://localhost:8080/login", {
+     const response = await fetch("http://localhost:8080/login", {
         method: "POST",
         body: JSON.stringify({
           userId,
@@ -41,10 +44,13 @@ export default function LoginPage() {
       });
 
       if (response.ok) {
-        alert(`You have logged in successfully. Status: ${response.status}`);
+      
+        const data =await response.json()
 
+        setUser({id : data.userid})
         router.push("/protected");
-        console.log(await response.json()); // Log the response JSON for debugging
+        console.log("user data after login ", data); // Log the response JSON for debugging
+
       } else {
         const msg = await response.text()
 
