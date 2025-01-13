@@ -131,6 +131,8 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		
+
 		fmt.Println("Token created after login :", tokenString)
 		response := userBody
 		fmt.Println(response)

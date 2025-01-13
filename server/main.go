@@ -12,8 +12,6 @@ import (
 	"github.com/gorilla/handlers"
 )
 
-//cors policy fix
-
 func main() {
 
 	db, err := postgres.DbConnect()
@@ -24,12 +22,13 @@ func main() {
 	defer db.Close()
 
 	router := http.NewServeMux()
-	router.HandleFunc("/chat", middleware.AuthMiddleware(sock.WS_handler))
+	router.HandleFunc("/chat", middleware.AuthMiddleware(sock.WS_handler(db)))
 	router.HandleFunc("/signup", auth.SignUpHandler(db))
 	router.HandleFunc("/login", auth.LoginHandler(db))
 	router.HandleFunc("/logout", auth.LogoutHandler)
 	router.HandleFunc("/verify-user", auth.VerifyUser)
 
+	//cors policy fix
 	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(
 		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
 		handlers.AllowedMethods([]string{"GET", "PUT", "POST", "DELETE"}),

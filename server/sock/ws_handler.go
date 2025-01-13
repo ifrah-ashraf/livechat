@@ -1,11 +1,15 @@
 package sock
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"livechat-app/middleware"
 	"log"
 	"net/http"
+	"sync"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 )
 
@@ -14,7 +18,7 @@ type Users struct {
 	Connection *websocket.Conn
 }
 
-type Data struct {
+type MessageData struct {
 	From    string `json:"from"`
 	To      string `json:"to"`
 	Message string `json:"message"`
@@ -30,47 +34,86 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func WS_handler(w http.ResponseWriter, r *http.Request) {
+func WS_handler(db *sql.DB) http.HandlerFunc {
 
-	userId := r.URL.Query().Get("id")
-	if userId == "" {
-		http.Error(w, "User ID is required", http.StatusBadRequest)
-		return
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		var wgSignal sync.WaitGroup
+
+		conn_channel := make(chan Users)
+		//userId := r.URL.Query().Get("id")
+
+		tokenCookie, err := r.Cookie("token")
+		if err != nil {
+			http.Error(w, "Unauthorized: Token missing in cookie", http.StatusUnauthorized)
+			return
+		}
+		token, err := middleware.VerifyToken(tokenCookie.Value)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Unauthorized: Token verification failed: %v", err), http.StatusUnauthorized)
+			return
+		}
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			http.Error(w, "Unauthorized: Invalid token claims", http.StatusUnauthorized)
+			return
+		}
+		sub, ok := claims["sub"].(string)
+		if !ok {
+			http.Error(w, "Unauthorized: sub claims token missing or invalid", http.StatusUnauthorized)
+			return
+		}
+		fmt.Printf("The user from the token is %s\n", sub)
+
+		userId := sub
+		if userId == "" {
+			http.Error(w, "User ID is required", http.StatusBadRequest)
+			return
+		}
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		fmt.Println("user ID connected => ", userId)
+
+		user := &Users{
+			ID:         userId,
+			Connection: conn,
+		}
+
+		clients[userId] = user
+
+		fmt.Println("Total users connected ", len(clients))
+
+		defer conn.Close()
+
+		wgSignal.Add(1)
+		func() {
+			wgSignal.Done()
+			go UserHandling(user, db)
+		}()
+
+		wgSignal.Wait()
+
 	}
-
-	fmt.Println("user ID connected => ", userId)
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	user := &Users{
-		ID:         userId,
-		Connection: conn,
-	}
-
-	clients[userId] = user
-
-	fmt.Println("Total users connected ", len(clients))
-
-	defer conn.Close()
-
-	UserHandling(user)
 
 }
 
-func UserHandling(user *Users) {
+func UserHandling(user *Users, db *sql.DB) {
 	defer func() {
 		user.Connection.Close()
 		delete(clients, user.ID)
 
 		fmt.Println("Exiting")
-		fmt.Println("Number of active clients", len(clients))
+		fmt.Println("Number of active clients now", len(clients))
 	}()
 
-	var message Data
+	fmt.Println("clients map : ", clients)
+
+	var message MessageData
 
 	for {
 		mt, msg, err := user.Connection.ReadMessage() // ye sender ka ws CONNECTION hai uska messsage receive honga
@@ -91,12 +134,31 @@ func UserHandling(user *Users) {
 			log.Println("Recepients doesn't exist: ", rcv)
 			continue
 		}
+
 		err = rcvConn.Connection.WriteMessage(mt, msg) // yha ss receiver ko msg jayega
 		if err != nil {
 			log.Println(err)
 			return
 		}
+
 		fmt.Println("Message from ", message.From, "is ", message.Message)
+
+		/* fmt.Println("message structure is :", message)
+		fmt.Println("db object is :", db) */
+
+		InsertMsg(message, db)
+
 	}
 
+}
+
+func InsertMsg(msg MessageData, db *sql.DB) {
+
+	iquery := `INSERT INTO messages (sender_id ,receiver_id ,content , status) values ($1 , $2 ,$3 , $4) RETURNING id `
+
+	var msgId int
+
+	db.QueryRow(iquery, msg.From, msg.To, msg.Message, "delivered").Scan(&msgId)
+
+	fmt.Println("message inserted successfully ", msgId)
 }
