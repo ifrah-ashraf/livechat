@@ -18,7 +18,7 @@ function page() {
   const handleClick = () => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       const payload: Data = {
-        from: "user-a",
+        from: "ifrah123",
         to: rcvId,
         message: message
       }
@@ -34,7 +34,7 @@ function page() {
 
   useEffect(() => {
     if (id) {
-      const socket = new WebSocket("ws://localhost:8080/chat?id=" + id)
+      const socket = new WebSocket("ws://localhost:8080/chat")
       setWs(socket)
 
       socket.onopen = () => {
