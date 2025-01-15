@@ -7,7 +7,6 @@ import (
 	"livechat-app/middleware"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
@@ -26,6 +25,9 @@ type MessageData struct {
 
 var clients = make(map[string]*Users)
 
+var isWorkerStarted = false
+var wp WorkerPool
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -37,11 +39,7 @@ var upgrader = websocket.Upgrader{
 func WS_handler(db *sql.DB) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		var wgSignal sync.WaitGroup
-
-		conn_channel := make(chan Users)
-		//userId := r.URL.Query().Get("id")
+		//userId := r.URL.Query().Get("id") */
 
 		tokenCookie, err := r.Cookie("token")
 		if err != nil {
@@ -63,7 +61,7 @@ func WS_handler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Unauthorized: sub claims token missing or invalid", http.StatusUnauthorized)
 			return
 		}
-		fmt.Printf("The user from the token is %s\n", sub)
+		fmt.Printf("[Server] The user from the token is %s\n", sub)
 
 		userId := sub
 		if userId == "" {
@@ -88,15 +86,14 @@ func WS_handler(db *sql.DB) http.HandlerFunc {
 
 		fmt.Println("Total users connected ", len(clients))
 
+		if !isWorkerStarted {
+			isWorkerStarted = true
+			wp = *New(5)
+		}
+
 		defer conn.Close()
 
-		wgSignal.Add(1)
-		func() {
-			wgSignal.Done()
-			go UserHandling(user, db)
-		}()
-
-		wgSignal.Wait()
+		UserHandling(user, db)
 
 	}
 
@@ -128,7 +125,16 @@ func UserHandling(user *Users, db *sql.DB) {
 			return
 		}
 
-		rcv := message.To
+		newTask := &Tasks{
+			user:          user,
+			message:       &message,
+			msgType:       mt,
+			actualMessage: msg,
+		}
+
+		wp.TaskChannel <- *newTask
+
+		/* rcv := message.To
 		rcvConn, exist := clients[rcv]
 		if !exist {
 			log.Println("Recepients doesn't exist: ", rcv)
@@ -146,7 +152,7 @@ func UserHandling(user *Users, db *sql.DB) {
 		/* fmt.Println("message structure is :", message)
 		fmt.Println("db object is :", db) */
 
-		InsertMsg(message, db)
+		//InsertMsg(message, db)
 
 	}
 
