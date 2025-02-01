@@ -5,8 +5,6 @@ import (
 	"log"
 )
 
-//var isChannelDeclared = false
-
 type WorkerPool struct {
 	MaxWorker     int
 	TaskChannel   chan Tasks
