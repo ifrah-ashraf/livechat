@@ -24,6 +24,10 @@ A real-time chat application built with **Golang** (backend), **Next.js** (front
    ```bash
    git clone https://github.com/ifrah-ashraf/livechat.git
    cd livechat/server
+
+3. Set the env variable and run backend:
+   ```bash
+   go mod tidy
    go run main.go
 
 2. Run the frontend
