@@ -21,12 +21,11 @@ func GinSignup(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		//var pu models.PartialUserData
 		iquery := `INSERT INTO users (userid ,name ,password , sex, age) values ($1 , $2 ,$3 , $4 , $5) RETURNING id , name ,created_at`
 
-		_, err := db.Exec(iquery, User.UserID, User.Name, User.Password, User.Sex, User.Age) //.Scan(&pu.ID, &pu.Name, &pu.CreatedAt)
+		_, err := db.Exec(iquery, User.UserID, User.Name, User.Password, User.Sex, User.Age)
 		if err != nil {
-			log.Printf("Database Insert Error: %v\n", err) // Log error
+			log.Printf("Database Insert Error: %v\n", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while inserting the user", "details": err.Error()})
 			return
 		}
@@ -89,16 +88,16 @@ func GinLogin(db *sql.DB) gin.HandlerFunc {
 func GinLogout(c *gin.Context) {
 	_, err := c.Cookie("token")
 	if err != nil {
-		log.Println("Token not found in ccokie", err)
-		c.JSON(401, gin.H{
-			"error": fmt.Sprintln("Cookie not found", err),
+		log.Println("Token not found in cookie:", err)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": fmt.Sprintf("Cookie not found: %v", err),
 		})
 		return
 	}
+
 	c.SetCookie("token", "", -1, "/", "localhost", false, true)
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "Cookie deleted successfully",
 	})
-
 }
