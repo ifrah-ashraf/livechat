@@ -3,13 +3,9 @@ package main
 import (
 	"fmt"
 	"livechat-app/auth"
-	"livechat-app/middleware"
 	"livechat-app/postgres"
-	"livechat-app/sock"
-	"log"
-	"net/http"
 
-	"github.com/gorilla/handlers"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -21,10 +17,18 @@ func main() {
 
 	defer db.Close()
 
-	router := http.NewServeMux()
-	router.HandleFunc("/chat", middleware.AuthMiddleware(sock.WS_handler(db)))
-	router.HandleFunc("/signup", auth.SignUpHandler(db))
+	newRouter := gin.Default()
+
+	//router := http.NewServeMux()
+
+	newRouter.POST("/signup", auth.GinSignup(db))
+	newRouter.POST("/login", auth.GinLogin(db))
+	newRouter.POST("/logout", auth.GinLogout)
+	newRouter.Run()
+	/* router.HandleFunc("/signup", auth.SignUpHandler(db))
 	router.HandleFunc("/login", auth.LoginHandler(db))
+
+	router.HandleFunc("/chat", middleware.AuthMiddleware(sock.WS_handler(db)))
 	router.HandleFunc("/logout", auth.LogoutHandler)
 	router.HandleFunc("/verify-user", auth.VerifyUser)
 
@@ -34,5 +38,6 @@ func main() {
 		handlers.AllowedMethods([]string{"GET", "PUT", "POST", "DELETE"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 		handlers.AllowCredentials(),
-	)(router)))
+	)(router))) */
+
 }

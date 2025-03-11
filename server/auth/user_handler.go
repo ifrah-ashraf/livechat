@@ -2,196 +2,103 @@ package auth
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"livechat-app/models"
 	"livechat-app/utils"
+	"log"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-func SignUpHandler(db *sql.DB) http.HandlerFunc {
-	// understand the difference between HandlerFunc and Handler <3
+func GinSignup(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var User models.NewUser
 
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		if err := c.BindJSON(&User); err != nil {
+			log.Printf("JSON Bind Error: %v\n", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request for signup, improper JSON value", "details": err.Error()})
 			return
 		}
 
-		var user models.NewUser
-
-		err := json.NewDecoder(r.Body).Decode(&user)
-		if err != nil {
-			http.Error(w, "Error while converting the json datta", http.StatusBadRequest)
-			fmt.Printf("Error while converting the data %v", err)
-			return
-		}
-
-		if user.UserID == "" || user.Name == "" || user.Age == 0 || user.Sex == "" || user.Password == "" {
-			http.Error(w, "Please fill all the given fields", http.StatusBadRequest)
-			fmt.Println("Validation failed: one or more field are empty")
-			return
-		}
-
-		//db logic
-
+		//var pu models.PartialUserData
 		iquery := `INSERT INTO users (userid ,name ,password , sex, age) values ($1 , $2 ,$3 , $4 , $5) RETURNING id , name ,created_at`
 
-		var pu models.PartialUserData
-
-		err = db.QueryRow(iquery, user.UserID, user.Name, user.Password, user.Sex, user.Age).Scan(&pu.ID, &pu.Name, &pu.CreatedAt)
+		_, err := db.Exec(iquery, User.UserID, User.Name, User.Password, User.Sex, User.Age) //.Scan(&pu.ID, &pu.Name, &pu.CreatedAt)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("error while inserting: %v", err), http.StatusInternalServerError)
-			fmt.Printf("Database insertion error: %v\n", err)
+			log.Printf("Database Insert Error: %v\n", err) // Log error
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while inserting the user", "details": err.Error()})
 			return
 		}
 
-		// db logic end
-
-		userId := user.UserID
+		userId := User.UserID
 		tokenString, err := utils.GenerateJWT(userId)
 		if err != nil {
-			http.Error(w, "failed to generate token", http.StatusInternalServerError)
+			log.Println("Error while generating token", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error while generating token %v", err)})
 			return
 		}
 
-		fmt.Println("Token created after sign up : ", tokenString)
-		response := pu
-		//use it for debug
-		fmt.Println(response)
-
-		cookie := http.Cookie{
-			Name:     "token",
-			Value:    tokenString,
-			Path:     "/",
-			MaxAge:   3600,
-			Secure:   false,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		}
-
-		http.SetCookie(w, &cookie)
-
-		w.Header().Set("Content-Type", "application/json")
-
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			http.Error(w, "Failed to encode receive id, time to json", http.StatusInternalServerError)
-		}
+		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
+		c.JSON(201, gin.H{
+			"message": "User registered succeesfully",
+			"token":   tokenString,
+		})
 
 	}
-
 }
 
-func LoginHandler(db *sql.DB) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+func GinLogin(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var User models.ExistUser
+		if err := c.BindJSON(&User); err != nil {
+			log.Printf("JSON Bind Error: %v\n", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request for login, %v", err)})
 			return
 		}
 
-		var userBody models.ExistUser
+		iquery := `SELECT userid , password FROM users WHERE userid = $1 and password = $2`
 
-		err := json.NewDecoder(r.Body).Decode(&userBody)
-		if err != nil {
-			http.Error(w, "Error while converting the json data", http.StatusBadRequest)
-			fmt.Printf("Error while converting the data %v", err)
-			return
-		}
-
-		if userBody.UserID == "" || userBody.Password == "" {
-			http.Error(w, "Please fill all the given fields", http.StatusBadRequest)
-			fmt.Println("Validation failed: one or more field are empty")
-			return
-		}
-
-		// db logic
-		var dbUser models.ExistUser
-		cquery := `SELECT userid , password FROM users WHERE userid = $1 and password = $2`
-
-		err = db.QueryRow(cquery, userBody.UserID, userBody.Password).Scan(&dbUser.UserID, &dbUser.Password)
-
+		_, err := db.Exec(iquery, User.UserID, User.Password)
 		if err == sql.ErrNoRows {
-			http.Error(w, fmt.Sprintf("no user found with the specified userid: %v", err), http.StatusInternalServerError)
-			fmt.Printf("No user found with the specified userid : %v", err)
+			log.Printf("No user found with the specified userid: %v", err)
+			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("No user found with the specified userid: %v", err)})
 			return
 		} else if err != nil {
-			http.Error(w, fmt.Sprintf("error while fetching the user from database %v", err), http.StatusInternalServerError)
-			fmt.Printf("error while fetching user details: %v", err)
+			log.Printf("Error while fetching user details: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error while fetching the user from database: %v", err)})
 			return
 		}
 
-		userid := userBody.UserID
-
-		tokenString, err := utils.GenerateJWT(userid)
+		userId := User.UserID
+		tokenString, err := utils.GenerateJWT(userId)
 		if err != nil {
-			http.Error(w, "failed to generate token", http.StatusInternalServerError)
+			log.Println("Error while generating token", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error while generating token %v", err)})
 			return
 		}
+		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
+		c.JSON(200, gin.H{
+			"message": "User found successfully",
+			"token":   tokenString,
+		})
 
-		
-
-		fmt.Println("Token created after login :", tokenString)
-		response := userBody
-		fmt.Println(response)
-
-		cookie := http.Cookie{
-			Name:     "token",
-			Value:    tokenString,
-			Path:     "/",
-			MaxAge:   3600,
-			Secure:   false,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		}
-
-		http.SetCookie(w, &cookie)
-
-		w.Header().Set("Content-Type", "application/json")
-
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			http.Error(w, "Failed to encode receive id, time to json", http.StatusInternalServerError)
-		}
 	}
-
 }
 
-func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	_, err := r.Cookie("token")
+func GinLogout(c *gin.Context) {
+	_, err := c.Cookie("token")
 	if err != nil {
-		http.Error(w, "Unauthorized: Token missing in cookie", http.StatusUnauthorized)
+		log.Println("Token not found in ccokie", err)
+		c.JSON(401, gin.H{
+			"error": fmt.Sprintln("Cookie not found", err),
+		})
 		return
 	}
+	c.SetCookie("token", "", -1, "/", "localhost", false, true)
 
-	newCookie := http.Cookie{
-		Name:     "token",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		Secure:   false,
-		HttpOnly: true,
-	}
+	c.JSON(200, gin.H{
+		"message": "Cookie deleted successfully",
+	})
 
-	http.SetCookie(w, &newCookie)
-
-	response := map[string]string{
-		"message": "logout successfully",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode receive id, time to json", http.StatusInternalServerError)
-	}
-
-	fmt.Println("cookie deleted successfully")
 }
