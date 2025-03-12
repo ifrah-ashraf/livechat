@@ -24,6 +24,7 @@ func main() {
 	newRouter.POST("/signup", auth.GinSignup(db))
 	newRouter.POST("/login", auth.GinLogin(db))
 	newRouter.POST("/logout", auth.GinLogout)
+	newRouter.GET("/verify-user", auth.GinVerifyUser)
 	newRouter.Run()
 	/* router.HandleFunc("/signup", auth.SignUpHandler(db))
 	router.HandleFunc("/login", auth.LoginHandler(db))

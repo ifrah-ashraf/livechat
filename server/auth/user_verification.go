@@ -1,56 +1,43 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 var secretKey = []byte("youhavetouseitGRWM")
 
-func VerifyUser(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	tokenString, err := r.Cookie("token")
+func GinVerifyUser(c *gin.Context) {
+	tokenStr, err := c.Cookie("token")
 	if err != nil {
-		http.Error(w, "Unauthorized: Token missing in cookie", http.StatusUnauthorized)
+		log.Println("Token not found in cookie:", err)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": fmt.Sprintf("Cookie not found: %v", err),
+		})
 		return
 	}
 
-	token, err := VerifyToken(tokenString.Value)
-
+	token, err := verifyToken(tokenStr)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Unauthorized: Token verification failed: %v", err), http.StatusUnauthorized)
+		log.Println("Unauthorized: Token verification failed : ", err)
+		c.JSON(401, gin.H{
+			"error": fmt.Sprintf("Unauthorized: Token verification failed :%v", err),
+		})
 		return
 	}
 
-	user, _ := token.Claims.GetSubject()
-	fmt.Printf("The user is %s \n", user)
-
-	response := map[string]string{
-		"user":    user,
-		"message": "token verified successfully",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode user id, message", http.StatusInternalServerError)
-	}
-
-	fmt.Printf("Token verified successfully. Claims: %+v\n", token.Claims)
-
+	userId, _ := token.Claims.GetSubject()
+	c.JSON(200, gin.H{
+		"userid":  userId,
+		"message": "User verified successfully",
+	})
 }
-
-func VerifyToken(tokenString string) (*jwt.Token, error) {
+func verifyToken(tokenString string) (*jwt.Token, error) {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 
