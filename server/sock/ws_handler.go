@@ -4,16 +4,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"livechat-app/auth"
 	"livechat-app/middleware"
 	"log"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 )
 
 type Users struct {
-	ID         string
+	ID         string //see to delete the client after disconnection we are adding this field
 	Connection *websocket.Conn
 }
 
@@ -167,4 +169,62 @@ func InsertMsg(msg MessageData, db *sql.DB) {
 	db.QueryRow(iquery, msg.From, msg.To, msg.Message, "delivered").Scan(&msgId)
 
 	fmt.Println("message inserted successfully ", msgId)
+}
+
+func Wsocket_handler(c *gin.Context) {
+	tokenStr, err := c.Cookie("token")
+	if err != nil {
+		log.Println("Error while fetching token : ", err)
+	}
+
+	token, err := auth.VerifyToken(tokenStr)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	userId, err := token.Claims.GetSubject()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	wsConn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer wsConn.Close()
+	user := Users{
+		ID:         userId,
+		Connection: wsConn,
+	}
+
+	clients[userId] = &user
+
+	fmt.Println("total users connected now", len(clients))
+	defer func() {
+		delete(clients, user.ID)
+		fmt.Println("Total users Connected after exit", len(clients))
+	}()
+
+	for {
+		var message MessageData
+		mt, msg, err := user.Connection.ReadMessage()
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		if err := json.Unmarshal(msg, &message); err != nil {
+			log.Println(err.Error())
+		}
+
+		rcv := message.To
+		rcvUser, exist := clients[rcv]
+		if !exist {
+			log.Println(err.Error())
+		}
+
+		err = rcvUser.Connection.WriteMessage(mt, msg)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		fmt.Println("Message from ", message.From, "to user", message.To, "is", message.Message)
+	}
 }

@@ -22,7 +22,7 @@ func GinVerifyUser(c *gin.Context) {
 		return
 	}
 
-	token, err := verifyToken(tokenStr)
+	token, err := VerifyToken(tokenStr)
 	if err != nil {
 		log.Println("Unauthorized: Token verification failed : ", err)
 		c.JSON(401, gin.H{
@@ -37,7 +37,7 @@ func GinVerifyUser(c *gin.Context) {
 		"message": "User verified successfully",
 	})
 }
-func verifyToken(tokenString string) (*jwt.Token, error) {
+func VerifyToken(tokenString string) (*jwt.Token, error) {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 

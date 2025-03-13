@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"livechat-app/auth"
 	"livechat-app/postgres"
+	"livechat-app/sock"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,6 +26,7 @@ func main() {
 	newRouter.POST("/login", auth.GinLogin(db))
 	newRouter.POST("/logout", auth.GinLogout)
 	newRouter.GET("/verify-user", auth.GinVerifyUser)
+	newRouter.GET("/chat", sock.Wsocket_handler)
 	newRouter.Run()
 	/* router.HandleFunc("/signup", auth.SignUpHandler(db))
 	router.HandleFunc("/login", auth.LoginHandler(db))
