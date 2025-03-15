@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    
+
 
     console.log("kuch to log ho jaa")
 

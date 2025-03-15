@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-
 	db, err := postgres.DbConnect()
 	if err != nil {
 		fmt.Println("Error in database", err)
@@ -19,7 +18,7 @@ func main() {
 	defer db.Close()
 
 	newRouter := gin.Default()
-
+	newRouter.Use(CorsMiddleware())
 	//router := http.NewServeMux()
 
 	newRouter.POST("/signup", auth.GinSignup(db))
@@ -43,4 +42,19 @@ func main() {
 		handlers.AllowCredentials(),
 	)(router))) */
 
+}
+
+func CorsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, Authorization")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
 }
