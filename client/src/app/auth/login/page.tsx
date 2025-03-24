@@ -12,16 +12,18 @@ function Page() {
 
         try {
             const response = await axios.post("http://localhost:8080/login", {
-                username : username, 
-                password : password,
+                username: username,
+                password: password,
+            }, {
+                withCredentials: true
             })
 
             console.log("Login Successful:", response.data)
-            setMessage("Login Successful!") 
+            setMessage("Login Successful!")
         } catch (error: any) {
             if (error.response) {
                 console.error("Server Error:", error.response.data)
-                setMessage(error.response.data.message || "Login Failed!") 
+                setMessage(error.response.data.message || "Login Failed!")
             } else {
                 console.error("Error:", error.message)
                 setMessage("An error occurred. Please try again.")
