@@ -1,35 +1,42 @@
 "use client"
 import axios from 'axios'
 import React, { useState } from 'react'
+import Cookies from "js-cookie"
 
 function Page() {
-    const [username, setUsername] = useState("")
+    const [userid, setUserId] = useState("")
     const [password, setPassword] = useState("")
     const [message, setMessage] = useState("")
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+        e.preventDefault();
+
+        const trimmedUserId = userid.trim();
+        const trimmedPassword = password.trim();
 
         try {
             const response = await axios.post("http://localhost:8080/login", {
-                username: username,
-                password: password,
+                userid: trimmedUserId,
+                password: trimmedPassword,
             }, {
                 withCredentials: true
-            })
+            });
 
-            console.log("Login Successful:", response.data)
-            setMessage("Login Successful!")
+            Cookies.set("userid", response.data.userid, { expires: 7, path: "/" });
+
+            console.log("Login Successful:", response.data);
+            setMessage("Login Successful!");
         } catch (error: any) {
             if (error.response) {
-                console.error("Server Error:", error.response.data)
-                setMessage(error.response.data.message || "Login Failed!")
+                console.error("Server Error:", error.response.data);
+                setMessage(error.response.data.message || "Login Failed!");
             } else {
-                console.error("Error:", error.message)
-                setMessage("An error occurred. Please try again.")
+                console.error("Error:", error.message);
+                setMessage("An error occurred. Please try again.");
             }
         }
-    }
+    };
+
 
     return (
         <div className="w-96 h-80 mx-auto mt-10 flex items-center justify-center">
@@ -46,8 +53,8 @@ function Page() {
                     <input
                         type="text"
                         name="username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
+                        value={userid}
+                        onChange={(e) => setUserId(e.target.value)}
                         placeholder="Enter username"
                         className="w-full p-2 border bg-white border-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
