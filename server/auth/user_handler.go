@@ -55,31 +55,36 @@ func GinLogin(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request for login, %v", err)})
 			return
 		}
-
+		var dbUserID, dbPassword string
+		fmt.Println("User object is", User)
 		iquery := `SELECT userid , password FROM users WHERE userid = $1 and password = $2`
 
-		_, err := db.Exec(iquery, User.UserID, User.Password)
+		row := db.QueryRow(iquery, User.UserID, User.Password)
+
+		err := row.Scan(&dbUserID, &dbPassword)
 		if err == sql.ErrNoRows {
 			log.Printf("No user found with the specified userid: %v", err)
-			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("No user found with the specified userid: %v", err)})
+			c.JSON(http.StatusNotFound, gin.H{"error": "No user found with the specified userid"})
 			return
 		} else if err != nil {
 			log.Printf("Error while fetching user details: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error while fetching the user from database: %v", err)})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching the user from database"})
 			return
 		}
 
 		userId := User.UserID
+
 		tokenString, err := utils.GenerateJWT(userId)
 		if err != nil {
 			log.Println("Error while generating token", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error while generating token %v", err)})
 			return
 		}
-		c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
+		c.SetCookie("token", tokenString, 7200, "/", "localhost", false, true)
 		c.JSON(200, gin.H{
 			"message": "User found successfully",
 			"token":   tokenString,
+			"userid":  userId,
 		})
 
 	}
