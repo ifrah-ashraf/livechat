@@ -6,24 +6,27 @@ type MessageBody = {
   message: string;
 };
 
-const useWebSocket = (serverUrl: string) => {
-  const [messages, setMessages] = useState<MessageBody[]>([]);
-  const ws = useRef<WebSocket | null>(null); // Use ref to persist WebSocket across renders
+// migrate this to global context later on to use isConnected like flag ..
+
+const useWebSocket = (serverUrl: string, onMessage: (msg: MessageBody) => void) => {
+  const ws = useRef<WebSocket | null>(null);
+  const [isConnected , setIsconnected] = useState<Boolean>(false)
 
   useEffect(() => {
     ws.current = new WebSocket(serverUrl);
 
     ws.current.onopen = () => console.log("Connected to WebSocket Server");
 
-    ws.current.onmessage = (event) => {
+   ws.current.onmessage = (event) => {
       try {
-        setMessages((prev) => [...prev, JSON.parse(event.data)]);
+        onMessage(JSON.parse(event.data))
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
     };
 
     ws.current.onclose = () => {
+      setIsconnected(false)
       console.log("Disconnected from WebSocket Server");
       ws.current = null;
     };
@@ -37,13 +40,14 @@ const useWebSocket = (serverUrl: string) => {
 
   const sendMessage = (msgBody: MessageBody) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      setIsconnected(true)
       ws.current.send(JSON.stringify(msgBody));
     } else {
       console.error("WebSocket not connected");
     }
   };
 
-  return { messages, sendMessage };
+  return { isConnected, sendMessage };
 };
 
 export default useWebSocket;

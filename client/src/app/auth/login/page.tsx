@@ -2,12 +2,16 @@
 import axios from 'axios'
 import React, { useState } from 'react'
 import Cookies from "js-cookie"
+import { useRouter } from 'next/navigation'
+import useWebSocket from '@/hooks/useWebsocket'
+
 
 function Page() {
     const [userid, setUserId] = useState("")
     const [password, setPassword] = useState("")
     const [message, setMessage] = useState("")
-
+    const router = useRouter()
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -23,9 +27,14 @@ function Page() {
             });
 
             Cookies.set("userid", response.data.userid, { expires: 7, path: "/" });
+            
 
             console.log("Login Successful:", response.data);
             setMessage("Login Successful!");
+            
+            if (response.status === 200){
+                router.push("/chat")
+            }
         } catch (error: any) {
             if (error.response) {
                 console.error("Server Error:", error.response.data);

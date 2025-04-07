@@ -1,40 +1,56 @@
 "use client";
 import Avatar from '@/components/Avatar';
+import ClientAvatar from '@/components/ClientAvatar';
 import useWebSocket from '@/hooks/useWebsocket';
 import Cookies from 'js-cookie';
 import { Send } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
-  
+type MessageBody = {
+    from: string;
+    to: string;
+    message: string;
+};
+
 function Page() {
     const [msg, setMsg] = useState<string>("");
     const [rcvId, setRcvId] = useState<string>("");
     const [sendId, setSendId] = useState<string>("")
-    const { messages, sendMessage } = useWebSocket("ws://localhost:8080/chat");
+    const { sendMessage } = useWebSocket("ws://localhost:8080/chat", (incoming) => {
+        setChatLog(prev => [...prev, incoming]);
+    });
+
+    const [chatLog, setChatLog] = useState<MessageBody[]>([]);
 
     useEffect(() => {
         const senderId = Cookies.get("userid");
         if (senderId) {
             setSendId(senderId)
         }
-
     }, [])
+
 
     const handleSend = () => {
         if (rcvId && msg) {
-            const newMessage = {
+            const newMessage: MessageBody = {
                 from: sendId,
                 to: rcvId,
-                message: msg
+                message: msg,
             };
-            sendMessage(newMessage);
-            console.log("message from main chat component", newMessage.message); // Log here
+
+            // this will update the client side UI locally
+            setChatLog((prev) => [...prev , newMessage])
+
+            // Send to server only when it is coming from other users
+            // here in newMessage add one id field to keep track of different messages (better approach)
+            if (newMessage.from != newMessage.to){
+                sendMessage(newMessage);
+            }
             setMsg("");
         } else {
             console.error("Receiver ID and message are required");
         }
     };
-
     return (
         <div className='w-128 h-112 mx-auto mt-10 shadow-md'>
             <div className='w-full h-full flex flex-col rounded-md bg-purple-300 border-1 '>
@@ -49,9 +65,13 @@ function Page() {
                 <div className='w-[90%] h-64 rounded-sm mx-auto mt-8 bg-white flex flex-col '>
                     <h2 className='text-center text-lg'>CHAT</h2>
                     <div className='flex-grow px-2 py-2 overflow-y-auto'>
-                        {messages.map((val, index) => (
-                            <Avatar key={index} msgData={val} />
-                        ))}
+                        {chatLog.map((val, index) => {
+                            return val.from === sendId ? (
+                                <ClientAvatar key={index} message={val.message} />
+                            ) : (
+                                <Avatar key={index} msgData={val} />
+                            );
+                        })}
                     </div>
                     <div className="mt-auto p-2">
                         <div className='w-full flex items-center gap-2 bg-white p-2 rounded-md shadow-sm border border-gray-300'>

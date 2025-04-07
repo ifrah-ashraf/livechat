@@ -38,21 +38,28 @@ func Wsocket_handler(c *gin.Context) {
 	tokenStr, err := c.Cookie("token")
 	if err != nil {
 		log.Println("Error while fetching token : ", err)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintln("Error while fetching token", err.Error())})
+		return
 	}
 
 	token, err := auth.VerifyToken(tokenStr)
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("Error while verifying the token", err.Error())
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintln("Token verification fails", err.Error())})
+		return
 	}
 	userId, err := token.Claims.GetSubject()
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("The token claim has error", err.Error())
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintln("Token claims error", err.Error())})
+		return
 	}
 
 	wsConn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println("Error in upgrading the ws connection", err.Error())
 	}
+
 	defer func() {
 		fmt.Println("Closing the websocket connection after exit")
 		wsConn.Close()

@@ -19,6 +19,7 @@ func main() {
 
 	newRouter := gin.Default()
 
+	newRouter.Use(gin.Recovery())
 	newRouter.Use(CorsMiddleware())
 
 	newRouter.POST("/signup", auth.GinSignup(db))
