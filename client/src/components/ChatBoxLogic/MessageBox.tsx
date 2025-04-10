@@ -15,14 +15,15 @@ type MessageBody = {
 interface UserInfo {
     currentUser: string,
     onAddUser: (user: string) => void
-    onBack: () => void //this is to control the layout in mobile view
 }
 
-const MessageBox = ({ currentUser, onAddUser, onBack }: UserInfo) => {
+const MessageBox = ({ currentUser, onAddUser }: UserInfo) => {
     const [msg, setMsg] = useState<string>("");
     const [sendId, setSendId] = useState<string>("");
+    const [selectedUser , setSelectedUser] = useState<string>("")
 
     const messageMapRef = useRef(new Map<string, MessageBody[]>())
+    const [chatlog, setChatlog] = useState<MessageBody[]>([])
 
     const { sendMessage } = useWebSocket("ws://localhost:8080/chat", (incoming) => {
         if (!messageMapRef.current.has(incoming.from)) {
@@ -31,8 +32,13 @@ const MessageBox = ({ currentUser, onAddUser, onBack }: UserInfo) => {
         }
 
         const prevMsgs = messageMapRef.current.get(incoming.from) || []
-        messageMapRef.current.set(incoming.from, [...prevMsgs, incoming])
+        const updatedMsgs = [...prevMsgs, incoming]
+        messageMapRef.current.set(incoming.from, updatedMsgs)
 
+        if (incoming.from === currentUser){
+            setChatlog(updatedMsgs)
+        }
+        
         console.log("Receiver map", messageMapRef)
 
     });
@@ -45,6 +51,15 @@ const MessageBox = ({ currentUser, onAddUser, onBack }: UserInfo) => {
 
     }, []);
 
+    useEffect(() => {
+        const userSelected = currentUser
+        setSelectedUser(userSelected)
+        if (!currentUser) { return } 
+        
+        const previousMsgs = messageMapRef.current.get(currentUser) || []
+        setChatlog(previousMsgs)
+    }, [currentUser])
+
     const handleSend = () => {
         const recvUser = currentUser;
 
@@ -56,9 +71,10 @@ const MessageBox = ({ currentUser, onAddUser, onBack }: UserInfo) => {
             };
 
             const prevMsgs = messageMapRef.current.get(recvUser) || []
-            messageMapRef.current.set(recvUser, [...prevMsgs, newMessage])
+            const updatedMsgs = [...prevMsgs, newMessage]
+            messageMapRef.current.set(recvUser, updatedMsgs)
 
-
+            setChatlog(updatedMsgs)
             sendMessage(newMessage)
             setMsg("")
 
@@ -70,21 +86,13 @@ const MessageBox = ({ currentUser, onAddUser, onBack }: UserInfo) => {
     }
 
     return (
-        <div className="flex flex-col h-full w-full bg-white p-4 rounded-lg shadow-md">
+        <div className="flex flex-col h-full  w-full bg-white p-4 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold text-gray-700 mb-2 text-center border-b border-gray-300 pb-2">
-                {onBack && (
-                    <button
-                        onClick={onBack}
-                        className="md:hidden text-blue-500 underline mb-2 inline-block"
-                    >
-                        ← Back
-                    </button>
-                )}
                 Live Chat with <span className="text-green-400">{currentUser || '...'}</span>
             </h2>
 
-            <div className="flex-grow min-h-0 overflow-y-auto bg-gray-50 rounded-md p-4 space-y-2">
-                {messageMapRef.current.get(currentUser)?.map((val, index) =>
+            <div className="flex-grow max-h-screen overflow-y-auto bg-gray-50 rounded-md p-4 space-y-2">
+                {chatlog.map((val, index) =>
                     val.from === sendId ? (
                         <ClientAvatar key={index} message={val.message} />
                     ) : (
@@ -92,7 +100,7 @@ const MessageBox = ({ currentUser, onAddUser, onBack }: UserInfo) => {
                     )
                 )}
             </div>
-            <div className="mt-2 flex gap-2 items-center border-t pt-3 sticky bottom-0 bg-white">
+            <div className="mt-2 flex gap-2 items-center border-t pt-3 bg-white">
                 <input
                     type="text"
                     name="message"

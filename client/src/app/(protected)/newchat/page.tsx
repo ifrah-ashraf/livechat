@@ -9,12 +9,10 @@ import React, { useState } from 'react';
 export default function Page() {
     const [userArr, setUserArr] = useState<string[]>([]);
     const [currentUser, setIsCurrentUser] = useState<string>("");
-    const [selectedUser, setSelectedUser] = useState<string | null>(null)
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="h-screen flex flex-col overflow-y-auto">
             <ChatNavbar />
-            {/* Desktop layout*/}
             <div className="hidden md:flex flex-grow ">
 
                 <UserLine
@@ -22,7 +20,7 @@ export default function Page() {
                     activeUser={currentUser}
                     onSelectUser={(user) => {
                         setIsCurrentUser(user);
-                        setSelectedUser(user);
+                        console.log("User selected in main page", )
                     }}
                     onAddUser={(user) => {
                         if (!userArr.includes(user)) {
@@ -31,7 +29,7 @@ export default function Page() {
                     }}
                 />
 
-                <div className="flex-grow p-4 bg-orange-200">
+                <div className="flex-grow p-4  bg-orange-200 ">
                     <MessageBox
                         currentUser={currentUser}
                         onAddUser={(user) => {
@@ -39,12 +37,11 @@ export default function Page() {
                                 setUserArr((prev) => [...prev, user]);
                             }
                         }}
-                        onBack={() => setSelectedUser(null)}
                     />
                 </div>
             </div>
             {/* Mobile layout */}
-            <div className="flex flex-col md:hidden flex-grow">
+           {/*  <div className="flex flex-col md:hidden flex-grow">
                 {!selectedUser ? (
                     <UserLine
                         users={userArr}
@@ -70,7 +67,7 @@ export default function Page() {
                         onBack={() => setSelectedUser(null)}
                     />
                 )}
-            </div>
+            </div> */}
         </div>
     );
 

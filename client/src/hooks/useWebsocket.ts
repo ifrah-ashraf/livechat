@@ -10,7 +10,7 @@ type MessageBody = {
 
 const useWebSocket = (serverUrl: string, onMessage: (msg: MessageBody) => void) => {
   const ws = useRef<WebSocket | null>(null);
-  const [isConnected, setIsconnected] = useState<Boolean>(false)
+  const [isConnected, setIsconnected] = useState<boolean>(false)
 
   useEffect(() => {
     ws.current = new WebSocket(serverUrl);
