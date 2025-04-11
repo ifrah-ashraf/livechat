@@ -35,10 +35,10 @@ const MessageBox = ({ currentUser, onAddUser }: UserInfo) => {
         const updatedMsgs = [...prevMsgs, incoming]
         messageMapRef.current.set(incoming.from, updatedMsgs)
 
-        if (incoming.from === currentUser){
+        if (incoming.from === currentUser) {
             setChatlog(updatedMsgs)
         }
-        
+
         console.log("Receiver map", messageMapRef)
 
     });
@@ -51,14 +51,14 @@ const MessageBox = ({ currentUser, onAddUser }: UserInfo) => {
 
     }, []);
 
-    useEffect(() => {
-        const userSelected = currentUser
-        setSelectedUser(userSelected)
-        if (!currentUser) { return } 
-        
-        const previousMsgs = messageMapRef.current.get(currentUser) || []
-        setChatlog(previousMsgs)
-    }, [currentUser])
+     useEffect(() => {
+         const userSelected = currentUser
+         setSelectedUser(userSelected)
+         if (!currentUser) { return } 
+         
+         const previousMsgs = messageMapRef.current.get(currentUser) || []
+         setChatlog(previousMsgs)
+     }, [currentUser]) 
 
     const handleSend = () => {
         const recvUser = currentUser;

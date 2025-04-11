@@ -22,6 +22,12 @@ func main() {
 	newRouter.Use(gin.Recovery())
 	newRouter.Use(CorsMiddleware())
 
+	newRouter.GET("/test", func(ctx *gin.Context) {
+		ctx.JSON(200, gin.H{
+			"message": "This is for test",
+		})
+	})
+
 	newRouter.POST("/signup", auth.GinSignup(db))
 	newRouter.POST("/login", auth.GinLogin(db))
 	newRouter.POST("/logout", auth.GinLogout)
